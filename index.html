@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLF 2026 — Tableau de Bord Interactif</title>
+  <meta name="description" content="Visualisation interactive des données budgétaires du Projet de Loi de Finances 2026 du Maroc">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ═══ TOOLTIP ═══ -->
+  <div id="tooltip" class="d3-tooltip"></div>
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">PLF</div>
+      <h2>Budget 2026</h2>
+      <p class="sidebar-sub">Royaume du Maroc</p>
+    </div>
+
+    <ul class="nav-links">
+      <li><a href="#hero" class="nav-link active" data-section="hero">
+        <span class="nav-icon">◈</span> Accueil
+      </a></li>
+      <li><a href="#sankey" class="nav-link" data-section="sankey">
+        <span class="nav-icon">⟠</span> Flux Budgétaires
+      </a></li>
+      <li><a href="#treemap-invest" class="nav-link" data-section="treemap-invest">
+        <span class="nav-icon">▦</span> 100 DH Investis
+      </a></li>
+      <li><a href="#treemap-global" class="nav-link" data-section="treemap-global">
+        <span class="nav-icon">▧</span> 100 DH Dépensés
+      </a></li>
+      <li><a href="#macro" class="nav-link" data-section="macro">
+        <span class="nav-icon">◭</span> Croissance 2026
+      </a></li>
+      <li><a href="#carte" class="nav-link" data-section="carte">
+        <span class="nav-icon">◎</span> Carte Régionale
+      </a></li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <p>Oussama Haimour</p>
+      <p class="sidebar-module">M206 — DataViz</p>
+      <p class="sidebar-year">2025 — 2026</p>
+    </div>
+  </nav>
+
+  <!-- ═══ TOGGLE SIDEBAR (mobile) ═══ -->
+  <button id="sidebar-toggle" aria-label="Toggle menu">☰</button>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main id="content">
+
+    <!-- ── HERO ── -->
+    <section id="hero" class="section">
+      <div class="hero-content">
+        <p class="hero-kicker">Projet de Loi de Finances 2026</p>
+        <h1 class="hero-title">
+          <span class="hero-line1">Analyse &amp; Visualisation</span>
+          <span class="hero-line2">des Données Budgétaires</span>
+        </h1>
+        <div class="hero-rule"></div>
+        <p class="hero-lead">
+          Une exploration interactive de <strong>527,65 milliards de dirhams</strong> — 
+          le budget de l'État marocain pour 2026, décomposé en flux financiers, 
+          répartitions sectorielles et dynamiques territoriales.
+        </p>
+        <div class="hero-stats">
+          <div class="stat-card">
+            <span class="stat-value">527,65</span>
+            <span class="stat-label">MMDH — Budget Total</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">39</span>
+            <span class="stat-label">Entités Budgétaires</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">12</span>
+            <span class="stat-label">Régions Analysées</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">+10,4%</span>
+            <span class="stat-label">Croissance Agricole</span>
+          </div>
+        </div>
+        <p class="hero-scroll">↓ Faites défiler pour explorer les visualisations</p>
+      </div>
+    </section>
+
+    <!-- ── SANKEY ── -->
+    <section id="sankey" class="section">
+      <div class="section-header">
+        <span class="section-number">01</span>
+        <h2>Flux Budgétaires — Diagramme de Sankey</h2>
+        <p class="section-subtitle">D'où vient l'argent, et où va-t-il ?</p>
+        <button class="btn-export" onclick="exportSVG('chart-sankey', 'Sankey_PLF2026.svg', 'PLF 2026 — Flux Budgétaires (Sankey)')">📥 Télécharger en SVG</button>
+      </div>
+      <div class="chart-container chart-container--wide">
+        <div id="chart-sankey" class="chart"></div>
+      </div>
+      <article class="interpretation">
+        <h3>Interprétation</h3>
+        <p>
+          Le diagramme de Sankey révèle une structure des recettes fortement ancrée dans la 
+          <strong>fiscalité intérieure</strong>. Les recettes fiscales totalisent <strong>375,32 MMDH</strong>, 
+          soit 71,1% du budget total. La <strong>TVA domine avec 122,4 MMDH</strong> (23,2%), 
+          un résultat classique dans les pays à revenus intermédiaires.
+        </p>
+        <div class="insight-box">
+          <h4>💡 Point clé — Le déficit structurel</h4>
+          <p>
+            L'écart entre les recettes propres (421,32 MMDH) et le budget total génère un 
+            déficit de <strong>106,33 MMDH</strong> (20,15%) — comblé par l'emprunt. Ce n'est pas 
+            une anomalie mais une stratégie d'investissement anticipée, avec un objectif de 
+            réduction vers 3% du PIB à l'horizon 2027.
+          </p>
+        </div>
+        <p>
+          Côté dépenses, les <strong>charges de Personnel dominent à 195,33 MMDH</strong> (37%), 
+          reflet de la taille de la fonction publique et des revalorisations salariales issues du 
+          dialogue social (48 MMDH d'effort cumulé). Les <strong>dépenses d'Investissement atteignent 
+          136,11 MMDH</strong> (25,8%), un niveau historiquement élevé.
+        </p>
+        <p class="source-note">Source : BCPLF2026FR, Classeur9.xlsx, Recettes du Budget Général.xlsx — Extraction manuelle</p>
+      </article>
+    </section>
+
+    <!-- ── TREEMAP INVESTISSEMENT ── -->
+    <section id="treemap-invest" class="section">
+      <div class="section-header">
+        <span class="section-number">02</span>
+        <h2>Pour 100 DH Investis — Treemap Investissement</h2>
+        <p class="section-subtitle">Si l'État investit 100 dirhams, comment les répartit-il ?</p>
+        <button class="btn-export" onclick="exportSVG('chart-treemap-invest', 'Treemap_Investissement.svg', 'PLF 2026 — Pour 100 DH Investis')">📥 Télécharger en SVG</button>
+      </div>
+      <div class="chart-container">
+        <div id="chart-treemap-invest" class="chart"></div>
+      </div>
+      <article class="interpretation">
+        <h3>Interprétation</h3>
+        <p>
+          Ce Treemap zoome sur la répartition de l'<strong>enveloppe d'investissement sectoriel</strong>. 
+          La dimension sociale est dominante : <strong>Santé + Éducation (39 DH)</strong>, 
+          Dialogue Social (13,4 DH) et Protection Sociale (11,6 DH) représentent à eux trois 
+          <strong>64 DH sur 100</strong> des investissements sectoriels.
+        </p>
+        <div class="insight-box">
+          <h4>💧 Priorité émergente — La gestion de l'eau</h4>
+          <p>
+            La <strong>gestion durable des ressources en eau</strong> (16,4 MMDH, 4,6 DH sur 100) 
+            constitue une priorité cohérente avec les défis du stress hydrique qui frappent le 
+            Maroc depuis plusieurs années consécutives de sécheresse.
+          </p>
+        </div>
+        <p class="source-note">Source : BCPLF2026FR, Classeur9.xlsx — Budget d'Investissement</p>
+      </article>
+    </section>
+
+    <!-- ── TREEMAP GLOBAL ── -->
+    <section id="treemap-global" class="section">
+      <div class="section-header">
+        <span class="section-number">03</span>
+        <h2>Pour 100 DH Dépensés — Treemap Global</h2>
+        <p class="section-subtitle">Répartition complète : fonctionnement + investissement + dette</p>
+        <button class="btn-export" onclick="exportSVG('chart-treemap-global', 'Treemap_Global.svg', 'PLF 2026 — Pour 100 DH Dépensés')">📥 Télécharger en SVG</button>
+      </div>
+      <div class="chart-container">
+        <div id="chart-treemap-global" class="chart"></div>
+      </div>
+      <article class="interpretation">
+        <h3>Interprétation</h3>
+        <p>
+          Le « Quartette de tête » — <strong>Éducation (18,79 DH)</strong>, Défense (11,66 DH), 
+          Intérieur (9,64 DH) et Santé (8,03 DH) — absorbe à lui seul <strong>48,12 DH sur 100</strong>, 
+          soit presque la moitié du budget de l'État.
+        </p>
+        <div class="insight-box">
+          <h4>🏫 Le pari sur le capital humain</h4>
+          <p>
+            Cette concentration reflète trois priorités indissociables : le <strong>capital humain</strong> 
+            (Éducation + Santé), la <strong>sécurité</strong> (Défense + Intérieur). Le Ministère de 
+            l'Éducation, avec 99,16 MMDH, représente à lui seul 18,8% du budget — un signal fort 
+            vers le développement à l'horizon 2030.
+          </p>
+        </div>
+        <p class="source-note">Source : BCPLF2026FR, Classeur9.xlsx — Budget Global</p>
+      </article>
+    </section>
+
+    <!-- ── MACRO ── -->
+    <section id="macro" class="section">
+      <div class="section-header">
+        <span class="section-number">04</span>
+        <h2>Croissance par Secteur — Prévisions 2026</h2>
+        <p class="section-subtitle">La vision macroéconomique qui justifie les allocations budgétaires</p>
+        <button class="btn-export" onclick="exportSVG('chart-macro', 'Croissance_Secteurs.svg', 'PLF 2026 — Croissance par Secteur')">📥 Télécharger en SVG</button>
+      </div>
+      <div class="chart-container">
+        <div id="chart-macro" class="chart"></div>
+      </div>
+      <article class="interpretation">
+        <h3>Interprétation</h3>
+        <p>
+          Le Secteur Primaire (Agriculture &amp; Pêche) est prévu en croissance de <strong>+10,4%</strong>, 
+          soit plus du double des taux prévus pour les secteurs Secondaire (+4,2%) et Tertiaire (+4,3%).
+        </p>
+        <div class="insight-box">
+          <h4>🌾 L'effet de base agricole</h4>
+          <p>
+            Ce chiffre spectaculaire s'explique par un <strong>effet de base favorable</strong> : 
+            après des années de sécheresse, les prévisions intègrent l'hypothèse d'une campagne 
+            céréalière normale. Combiné aux investissements dans l'irrigation, ce rebond justifie 
+            la concentration des investissements dans les régions à fort potentiel agricole 
+            (Béni Mellal, Souss-Massa).
+          </p>
+        </div>
+        <p>
+          Les secteurs Secondaire et Tertiaire maintiennent une croissance structurelle (+4,2% et +4,3%), 
+          portée par l'industrie, le BTP, le tourisme record (17M+ visiteurs en 2024) et les technologies 
+          de l'information.
+        </p>
+        <p class="source-note">Source : HCP/MEF, Master_Data_2_Macro.csv</p>
+      </article>
+    </section>
+
+    <!-- ── CARTE ── -->
+    <section id="carte" class="section">
+      <div class="section-header">
+        <span class="section-number">05</span>
+        <h2>Carte Régionale des Investissements</h2>
+        <p class="section-subtitle">Agriculture &amp; Aménagement du Territoire — répartition par région</p>
+        <button class="btn-export" onclick="exportSVG('chart-carte', 'Carte_Investissements.svg', 'PLF 2026 — Carte Régionale des Investissements')">📥 Télécharger en SVG</button>
+      </div>
+      <div class="chart-container">
+        <div id="chart-carte" class="chart"></div>
+      </div>
+      <article class="interpretation">
+        <h3>Interprétation</h3>
+        <p>
+          <strong>Béni Mellal-Khénifra</strong> (46 MDH) et <strong>Souss-Massa</strong> (35,7 MDH) 
+          se distinguent comme les deux premières régions bénéficiaires des investissements agricoles.
+        </p>
+        <div class="insight-box">
+          <h4>🗺️ Cohérence économique territoriale</h4>
+          <p>
+            Béni Mellal abrite les plaines irriguées du Tadla et de Béni Amir (betterave, olives, céréales). 
+            Souss-Massa est le moteur de l'agro-exportation vers l'Europe (tomates, agrumes, fruits rouges). 
+            Les régions du Grand Sud présentent des montants modestes dans nos données, mais leurs projets 
+            stratégiques sont financés hors du périmètre de la Morasse traditionnelle.
+          </p>
+        </div>
+        <p class="source-note">Source : Morasse_2026_FR → Master_Data_3_Regions.csv</p>
+      </article>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer>
+      <div class="footer-content">
+        <p><strong>Projet DataViz PLF 2026</strong> — Module M206</p>
+        <p>Réalisé par Oussama Haimour · Encadrant : Hamza Saber</p>
+        <p class="footer-sources">Sources : MEF · Budget Citoyen PLF 2026 · Morasse Budgétaire 2026 · HCP</p>
+      </div>
+    </footer>
+
+  </main>
+
+  <script src="data.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+</body>
+</html>
