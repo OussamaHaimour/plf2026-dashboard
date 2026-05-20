@@ -245,10 +245,23 @@ function buildTreemap(containerId, rawData, colorInterp, threshold) {
 function buildMacro() {
   const el = document.getElementById('chart-macro');
   const W = el.clientWidth || 800;
-  const margin = { top: 30, right: 100, bottom: 40, left: 280 };
-  const H = 300;
+  const isMobile = W < 500;
+  const margin = {
+    top: 30,
+    right: isMobile ? 50 : 100,
+    bottom: 40,
+    left: isMobile ? 20 : 280
+  };
+  const H = isMobile ? 350 : 300;
   const iW = W - margin.left - margin.right;
   const iH = H - margin.top - margin.bottom;
+
+  // Shorter labels for mobile
+  const shortNames = {
+    'Secteur Secondaire (Industrie & BTP)': 'Industrie & BTP',
+    'Secteur Tertiaire (Services)': 'Services',
+    'Secteur Primaire (Agriculture & Pêche)': 'Agriculture & Pêche'
+  };
 
   const data = [...DATA.macro].sort((a, b) => a.valeur - b.valeur);
   const x = d3.scaleLinear().domain([0, d3.max(data, d => d.valeur) * 1.15]).range([0, iW]);
@@ -263,15 +276,17 @@ function buildMacro() {
 
   // Grid lines
   g.append('g').attr('class', 'axis')
-    .call(d3.axisBottom(x).ticks(5).tickSize(iH).tickFormat(d => d + '%'))
+    .call(d3.axisBottom(x).ticks(isMobile ? 3 : 5).tickSize(iH).tickFormat(d => d + '%'))
     .call(g => g.select('.domain').remove())
     .call(g => g.selectAll('line').attr('stroke', '#e2e8f0').attr('stroke-dasharray', '4,3'))
-    .call(g => g.selectAll('text').attr('dy', iH + 14));
+    .call(g => g.selectAll('text').attr('dy', iH + 14).style('font-size', isMobile ? '10px' : '12px'));
 
-  // Y axis
-  g.append('g').attr('class', 'axis')
-    .call(d3.axisLeft(y).tickSize(0).tickPadding(10))
-    .call(g => g.select('.domain').remove());
+  if (!isMobile) {
+    // Y axis labels on the left (desktop only)
+    g.append('g').attr('class', 'axis')
+      .call(d3.axisLeft(y).tickSize(0).tickPadding(10))
+      .call(g => g.select('.domain').remove());
+  }
 
   // Bars
   const bars = g.selectAll('.bar-group').data(data).join('g').attr('class', 'bar-group');
@@ -289,12 +304,30 @@ function buildMacro() {
     .transition().duration(800).ease(d3.easeCubicOut)
     .attr('width', d => x(d.valeur));
 
-  // Value labels
+  // On mobile: labels INSIDE the bars
+  if (isMobile) {
+    bars.append('text')
+      .attr('x', 8)
+      .attr('y', d => y(d.secteur) + y.bandwidth() / 2)
+      .attr('dy', '0.35em')
+      .text(d => shortNames[d.secteur] || d.secteur)
+      .style('font-size', '11px')
+      .style('font-weight', '600')
+      .style('fill', '#fff')
+      .style('pointer-events', 'none')
+      .style('opacity', 0)
+      .transition().delay(500).duration(400)
+      .style('opacity', 1);
+  }
+
+  // Value labels at end of bar
   bars.append('text')
     .attr('x', d => x(d.valeur) + 8)
     .attr('y', d => y(d.secteur) + y.bandwidth() / 2)
     .attr('dy', '0.35em')
     .text(d => `+${d.valeur}%`)
+    .style('font-size', isMobile ? '12px' : '14px')
+    .style('font-weight', '700')
     .style('opacity', 0)
     .transition().delay(600).duration(400)
     .style('opacity', 1);
